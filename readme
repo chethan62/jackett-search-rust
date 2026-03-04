@@ -1,133 +1,47 @@
-If you want to keep your GitHub repository clean and easy for others to use, you should include these **three essential files**. This setup ensures that someone can clone your repo, build it, and understand how to install it in one go.
+# Jackett Search Engine for qBittorrent (Rust Core) 🦀🚀
+
+A high-performance search plugin for qBittorrent that uses a compiled **Rust** binary to handle API requests and XML parsing. This replaces the traditional interpreted Python logic with a native, async middleware for maximum efficiency.
+
+## 🌟 Features
+- **Blazing Fast:** Native execution speeds for processing large Torznab XML result sets.
+- **Async Concurrency:** Built on the `Tokio` runtime for non-blocking I/O.
+- **Resilient Networking:** Implemented 45-second timeouts and custom User-Agent to handle slow trackers.
+- **Linux & Windows Support:** Optimized for Void Linux, CachyOS, and Windows 10/11.
 
 ---
 
-### 1. `src/main.rs` (The Rust Core)
+## 🛠️ Installation (Linux)
 
-This handles the heavy lifting: connecting to Jackett, parsing the XML, and outputting the results for qBittorrent.
+### 1. Build the Binary
+```bash
+cargo build --release
 
-```rust
-use std::env;
-use quick_xml::de::from_str;
-use serde::Deserialize;
+Deploy to qBittorrent
 
-#[derive(Deserialize, Debug)]
-struct Rss { channel: Channel }
+mkdir -p ~/.local/share/qBittorrent/nova3/engines/
+cp target/release/jackett-search ~/.local/share/qBittorrent/nova3/engines/
+cp jackett_rust.py ~/.local/share/qBittorrent/nova3/engines/
+chmod +x ~/.local/share/qBittorrent/nova3/engines/jackett-search
 
-#[derive(Deserialize, Debug)]
-struct Channel { item: Vec<Item> }
 
-#[derive(Deserialize, Debug)]
-struct Item {
-    title: String,
-    link: String,
-    size: Option<u64>,
-    #[serde(rename = "attr", default)]
-    attributes: Vec<TorznabAttr>,
-}
+Configure
 
-#[derive(Deserialize, Debug)]
-struct TorznabAttr {
-    #[serde(rename = "@name")]
-    name: String,
-    #[serde(rename = "@value")]
-    value: String,
-}
+Edit ~/.local/share/qBittorrent/nova3/engines/jackett_rust.py and replace YOUR_API_KEY_HERE with your actual Jackett API key.
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args: Vec<String> = env::args().collect();
-    if args.len() < 3 { return Ok(()); }
 
-    let api_key = &args[1];
-    let query = &args[2];
-    let url = format!("http://127.0.0.1:9117/api/v2.0/indexers/all/results/torznab/api?apikey={}&q={}", api_key, query);
+Installation (Windows)
+1. Build the Binary
+PowerShell
 
-    let client = reqwest::Client::new();
-    let body = client.get(url).send().await?.text().await?;
-    let rss: Rss = from_str(&body)?;
+cargo build --release
 
-    for it in rss.channel.item {
-        let seeds = it.attributes.iter().find(|a| a.name == "seeders").map(|a| a.value.as_str()).unwrap_or("-1");
-        let leech = it.attributes.iter().find(|a| a.name == "peers").map(|a| a.value.as_str()).unwrap_or("-1");
+2. Deploy to qBittorrent
 
-        println!("{}|{}|{}|{}|{}|{}|{}",
-            it.link, it.title.replace('|', ""), it.size.unwrap_or(0),
-            seeds, leech, "http://127.0.0.1:9117", it.link
-        );
-    }
-    Ok(())
-}
+    Open %localappdata%\qBittorrent\nova3\engines\ in File Explorer.
 
-```
+    Copy target/release/jackett-search.exe and jackett_rust.py into that folder.
 
----
+    In jackett_rust.py, ensure the binary path is:
+    BINARY_PATH = os.path.join(os.path.dirname(__file__), "jackett-search.exe")
 
-### 2. `jackett_rust.py` (The Python Shim)
 
-This is the "bridge" file that qBittorrent actually runs.
-
-```python
-# VERSION: 1.0
-# AUTHORS: Chethan (Rust Engine)
-
-import subprocess
-import os
-import sys
-
-class jackett_rust:
-    name = 'Jackett (Rust)'
-    url = 'http://127.0.0.1:9117'
-    BINARY_PATH = os.path.join(os.path.dirname(__file__), "jackett-search")
-    API_KEY = "YOUR_API_KEY_HERE"
-
-    def search(self, what, cat='all'):
-        try:
-            process = subprocess.run([self.BINARY_PATH, self.API_KEY, what], capture_output=True, text=True)
-            print(process.stdout)
-        except Exception as e:
-            print(f"Error: {e}", file=sys.stderr)
-
-    def download_torrent(self, info):
-        print(info + " " + info)
-
-```
-
----
-
-### 3. `Cargo.toml` (The Manifest)
-
-This file tells Rust which crates (libraries) to download to build your project.
-
-```toml
-[package]
-name = "jackett-search"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-tokio = { version = "1", features = ["full"] }
-reqwest = { version = "0.11", features = ["json"] }
-serde = { version = "1.0", features = ["derive"] }
-quick-xml = { version = "0.31", features = ["serialize"] }
-
-```
-
----
-
-### 📂 How to organize them for GitHub
-
-Place them in your `jackett-search` folder like this:
-
-```text
-jackett-search/
-├── Cargo.toml
-├── jackett_rust.py
-├── README.md
-├── .gitignore
-└── src/
-    └── main.rs
-
-```
-
-Since you want to show this off on GitHub, would you like me to generate a **License file** (like MIT) to make it a proper open-source project?
