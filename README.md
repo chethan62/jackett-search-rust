@@ -26,7 +26,15 @@ chmod +x ~/.local/share/qBittorrent/nova3/engines/jackett-search
 ```
 
 ### 3. Configure
-Edit `~/.local/share/qBittorrent/nova3/engines/jackett_rust.py` and replace `YOUR_API_KEY_HERE` with your actual Jackett API key.
+Set the `JACKETT_API_KEY` environment variable to your Jackett API key.
+The key is read at runtime; it is **not** hardcoded in the plugin.
+
+```bash
+export JACKETT_API_KEY="your-jackett-api-key"
+# or add it to your shell profile / qBittorrent service environment
+```
+
+Your Jackett API key is shown in Jackett's web UI (top-right, "Copy API key").
 
 ---
 
@@ -42,6 +50,7 @@ cargo build --release
 2. Copy `target/release/jackett-search.exe` and `jackett_rust.py` into that folder.
 3. In `jackett_rust.py`, ensure the binary path is:
    `BINARY_PATH = os.path.join(os.path.dirname(__file__), "jackett-search.exe")`
+4. Set the `JACKETT_API_KEY` environment variable (System → Environment Variables) to your Jackett API key.
 
 ---
 

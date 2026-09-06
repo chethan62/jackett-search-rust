@@ -1,1 +1,6 @@
 target/
+
+# never commit secrets
+.env
+.env.*
+*.env
